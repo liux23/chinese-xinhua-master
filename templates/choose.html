@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Selection</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-image: url("{{ url_for('static', filename='chat-bg.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .position {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .image-frame {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border: 5px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            background-color: #fff;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+            aspect-ratio: 3/4;
+            justify-content: space-between;
+            margin: 5px;
+        }
+
+        .image-frame:hover {
+            border-color: #007BFF;
+            box-shadow: 0 6px 15px rgba(0, 123, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            flex-grow: 1;
+            object-fit: cover;
+
+            /* 根据屏幕大小控制图片尺寸 */
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .character-name {
+            margin-top: 8px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        /* 大屏幕 - 每行4张图片，图片较大 */
+        @media (min-width: 1024px) {
+            .position {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 25px;
+                max-width: 800px;
+            }
+
+            .image-frame {
+                padding: 15px;
+                min-height: 280px;
+            }
+
+            img {
+                min-height: 200px;
+            }
+
+            .character-name {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* 中等屏幕 - 每行4张图片 */
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .position {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 20px;
+                max-width: 700px;
+            }
+
+            .image-frame {
+                padding: 12px;
+                min-height: 240px;
+            }
+
+            img {
+                min-height: 160px;
+            }
+
+            .character-name {
+                font-size: 1rem;
+            }
+        }
+
+        /* 小屏幕 - 每行2张图片 */
+        @media (max-width: 767px) and (min-width: 481px) {
+            .position {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                max-width: 500px;
+            }
+
+            .image-frame {
+                padding: 10px;
+                min-height: 200px;
+            }
+
+            img {
+                min-height: 140px;
+            }
+
+            .character-name {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 超小屏幕 - 每行2张图片，更小间距 */
+        @media (max-width: 480px) {
+            .position {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                max-width: 400px;
+            }
+
+            .image-frame {
+                padding: 8px;
+                min-height: 180px;
+                border-width: 3px;
+            }
+
+            img {
+                min-height: 120px;
+            }
+
+            .character-name {
+                font-size: 0.8rem;
+                margin-top: 5px;
+            }
+
+            body {
+                padding: 10px;
+            }
+        }
+
+        /* 极小屏幕 - 每行1张图片 */
+        @media (max-width: 320px) {
+            .position {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                max-width: 280px;
+            }
+
+            .image-frame {
+                min-height: 220px;
+                padding: 12px;
+            }
+
+            img {
+                min-height: 160px;
+            }
+
+            .character-name {
+                font-size: 1rem;
+            }
+        }
+    </style>
+ <script>
+        function sendValue(value) {
+            fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ value: value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 使用隐藏的 form 提交 POST 请求跳转
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/battle';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</head>
+<body>
+    <form action="/choose" method="POST">
+        <div class="position">
+            {% for item in result %}
+                <div class="image-frame">
+                    <img src="{{ item[1] }}" alt="{{ item[0] }}" onclick="sendValue('{{ item[0] }}')">
+                </div>
+            {% endfor %}
+        </div>
+    </form>
+</body>
+</html>

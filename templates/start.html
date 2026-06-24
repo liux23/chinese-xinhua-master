@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 添加视口元标签 -->
+    <title>start</title>
+    <style>
+        .hidden {
+            display: none; /* 隐藏元素 */
+        }
+        h1 {
+            font-family: 'Georgia', serif; /* 设置字体系列 */
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            background-image: url("{{ url_for('static', filename='chat-bg.jpg') }}"); /* 背景图像路径 */
+            background-size: cover; /* 使背景图像覆盖整个页面 */
+            background-position: center; /* 居中背景图像 */
+            background-repeat: no-repeat; /* 不重复背景图像 */
+        }
+        .box-position {
+            display: flex; /* 使用 flexbox */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            height: 100%;
+        }
+        .selection-window {
+            width: 90%; /* 使用百分比宽度 */
+            max-width: 400px; /* 最大宽度 */
+            text-align: center;
+            padding: 5%; /* 内边距 */
+            background-color: rgba(240, 240, 240, 0.9); /* 半透明背景 */
+            border-radius: 15px; /* 圆角 */
+            margin: 15px;
+        }
+        .btn-view {
+            display: flex;
+            flex-direction: column; /* 垂直排列按钮 */
+            gap: 10px; /* 按钮间距 */
+            margin-top: 20px; /* 顶部间距 */
+        }
+        .btn {
+            padding: 10px 20px; /* 按钮内边距 */
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角 */
+            background-color: #87CEFA; /* 按钮背景色 */
+            color: white; /* 字体颜色 */
+            cursor: pointer; /* 鼠标指针样式 */
+            font-family: 'Times New Roman', Times, serif; /* 正文字体 */
+            font-size: 16px; /* 正文字体大小 */
+            font-weight: 400; /* 常规字体 */
+            width: 100%; /* 按钮宽度自适应 */
+        }
+        .btn:hover {
+            background-color: #87CEEB; /* 鼠标悬停时的背景色 */
+        }
+    </style>
+</head>
+<body>
+    <div class="box-position">
+        <div class="selection-window">
+            <h1>欢迎来到成语大赛</h1>
+            <label style="color: #6495ED; font-family: 'Georgia', serif; font-size: 20px;">请先选择对手</label><br>
+            <div class="btn-view">
+                <form action="/battle" method="POST">
+                    <button type="submit" class="btn">自动匹配</button>
+                </form>
+                <form action="/choose" method="POST">
+                    <button type="submit" class="btn">挑选对手</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录页面</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background-image: url("{{ url_for('static', filename='background.jpg') }}"); /* 背景图像路径 */
+            background-size: cover; /* 使背景图像覆盖整个页面 */
+            background-position: center; /* 居中背景图像 */
+            background-repeat: no-repeat; /* 不重复背景图像 */
+            display: flex; /* 使用 Flexbox */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+        }
+
+        .login-container {
+            max-width: 400px; /* 调整最大宽度 */
+            width: 90%; /* 使用百分比宽度 */
+            padding: 20px; /* 内边距 */
+            background-color: rgba(255, 255, 255, 0.8); /* 背景色和透明度 */
+            border-radius: 8px; /* 圆角边框 */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+        }
+
+        .login-group {
+            margin: 15px 0; /* 上下间距 */
+        }
+
+        .input-name {
+            width: 30%; /* 调整标签宽度 */
+            min-width: 80px; /* 设置最小宽度 */
+        }
+
+        .button {
+            width: 100%; /* 按钮宽度设置为 100% */
+        }
+    </style>
+</head>
+<body>
+    <div class="container login-container">
+        <h2 class="text-center">登录</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-warning">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="POST" action="/login">
+            <div class="form-group login-group">
+                <label for="username" class="input-name">用户名</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="form-group login-group">
+                <label for="password" class="input-name">密码</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary button">登录</button>
+        </form>
+    </div>
+</body>
+</html>

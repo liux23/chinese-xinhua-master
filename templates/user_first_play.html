@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idiom Chain</title>
+    <style>
+        /* 游戏结束弹窗样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #343a40;
+            text-align: center;
+        }
+        .idiom-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .idiom-item {
+            padding: 8px 5px;
+            border-bottom: 1px solid #ced4da;
+        }
+        .idiom-item:last-child {
+            border-bottom: none;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .modal-btn.exit {
+            background-color: #dc3545;
+            color: white;
+        }
+        .modal-btn.records {
+            background-color: #28a745;
+            color: white;
+        }
+        .modal-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 90%;
+                padding-left: 5%;
+            }
+            .modal-content {
+                width: 95%;
+            }
+            .modal-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        .hidden {
+            display: none;
+        }
+        h1 {
+            font-family: 'Georgia', serif;
+        }
+        html, body {
+            height: 100vh;
+            margin: 0;
+        }
+        body {
+            background-image: url("{{ url_for('static', filename='chat-bg.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .box-position {
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+        }
+        .box-bg {
+            background-image: url("{{ url_for('static', filename='box-bg3.png') }}");
+            background-size: 1000px 800px;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 100%;
+            height: 100%;
+            position: fixed;
+        }
+        .selection-window {
+            width: 300px;
+            height: 300px;
+            text-align: center;
+            padding-top: 15%;
+            padding-left: 38%;
+        }
+        .border-window {
+            border-radius: 15px;
+            padding: 6% 4% 13% 4%;
+            background-color: #f0f0f0;
+        }
+        .btn-view {
+            padding-top: 6%;
+            display: flex;
+            justify-content: space-between;
+            margin-left: 18px;
+            margin-right: 18px;
+        }
+        .btn {
+            padding: 13px 32px;
+            border: none;
+            border-radius: 20px;
+            background-color: #87CEFA;
+            color: white;
+            cursor: pointer;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 16px;
+            font-weight: 400;
+        }
+        .btn:hover {
+            background-color: #87CEEB;
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 500px;
+            width: 40%;
+            padding-top: 8%;
+            padding-left: 30%;
+            overflow: hidden;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #fff;
+        }
+        .chat-message {
+            margin: 5px 0;
+            display: flex;
+        }
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+        .chat-message.ai {
+            justify-content: flex-start;
+        }
+        .message {
+            max-width: 70%;
+            padding: 10px;
+            border-radius: 10px;
+            color: #fff;
+        }
+        .message.user {
+            background-color: #007bff;
+        }
+        .message.ai {
+            background-color: #28a745;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .chat-input button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+        /* 媒体查询 */
+        @media (max-width: 600px) {
+            .box-bg {
+                width: 95%;
+                height: auto;
+            }
+            .chat-input {
+                flex-direction: column;
+            }
+            .chat-input input {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="box-position">
+        <div class="box-bg">
+            <!-- 注意：此处 form 的 action 可能需要根据实际后端路由调整 -->
+            <form action="/UserFirst" method="POST">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- 聊天消息将动态添加到此处 -->
+                    </div>
+                    <div id="myForm" class="chat-input">
+<!--                        <label for="user_input">请输入成语：</label>-->
+                        <input type="text" id="user_input" name="user_input" autocomplete="off"
+                               placeholder="输入成语或Q退出..." required />
+                        <button type="button" class="button" id="submitBtn">发送</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- 游戏结束弹窗 -->
+    <div id="gameOverModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">游戏结束</div>
+            <p>本局使用的成语：</p>
+            <div id="idiomsList" class="idiom-list"></div>
+            <div class="modal-buttons">
+                <button id="exitGame" class="modal-btn exit">退出游戏</button>
+                <button id="viewRecords" class="modal-btn records">查看历史战绩</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chatMessages');
+            const userInput = document.getElementById('user_input');
+            const submitBtn = document.getElementById('submitBtn');
+            const gameOverModal = document.getElementById('gameOverModal');
+            const idiomsList = document.getElementById('idiomsList');
+            const exitGameBtn = document.getElementById('exitGame');
+            const viewRecordsBtn = document.getElementById('viewRecords');
+
+            // 辅助函数：转义HTML特殊字符，防止XSS
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
+            }
+
+            // 滚动到底部
+            function scrollToBottom() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // 提交用户输入
+            function submitInput() {
+                const input = userInput.value.trim();
+                if (!input) return;
+                // 清空输入框
+                userInput.value = '';
+
+                // 显示用户输入（转义）
+                const userMessage = document.createElement('div');
+                userMessage.className = 'chat-message user';
+                userMessage.innerHTML = `<div class="message user">${escapeHtml(input)}</div>`;
+                chatMessages.appendChild(userMessage);
+                scrollToBottom();   // 立即滚动到新消息
+
+                // 发送用户输入到后端
+                fetch('/UserFirstPlay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `user_input=${encodeURIComponent(input)}`,
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应不正常');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === "game_over") {
+                        // 显示游戏结束弹窗
+                        showGameOverModal(data);
+                    } else {
+                        // 显示 AI 响应（转义）
+                        const aiMessage = document.createElement('div');
+                        aiMessage.className = 'chat-message ai';   // 小写匹配CSS
+                        aiMessage.innerHTML = `<div class="message ai">${escapeHtml(data.message)}</div>`;
+                        chatMessages.appendChild(aiMessage);
+                        scrollToBottom();   // 滚动到AI回复
+                    }
+                })
+                .catch(error => {
+                    console.error('请求失败:', error);
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'chat-message ai';
+                    errorMsg.innerHTML = `<div class="message ai">发生错误: ${escapeHtml(error.message)}</div>`;
+                    chatMessages.appendChild(errorMsg);
+                    scrollToBottom();
+                });
+            }
+
+            // 显示游戏结束弹窗
+            function showGameOverModal(data) {
+                // 填充成语列表（data.used_idioms 是数组）
+                if (data.used_idioms && data.used_idioms.length) {
+                    idiomsList.innerHTML = data.used_idioms.map((idiom, index) =>
+                        `<div class="idiom-item">${index + 1}. ${escapeHtml(idiom)}</div>`
+                    ).join('');
+                } else {
+                    idiomsList.innerHTML = '<div class="idiom-item">暂无成语记录</div>';
+                }
+
+                // 显示弹窗
+                gameOverModal.style.display = 'flex';
+
+                // 按钮事件
+                exitGameBtn.onclick = function() {
+                    window.location.href = data.redirect_urls.exit;
+                };
+
+                viewRecordsBtn.onclick = function() {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = data.redirect_urls.records;
+                    document.body.appendChild(form);
+                    form.submit();
+                };
+            }
+
+            // 绑定事件
+            submitBtn.addEventListener('click', submitInput);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();  // 防止触发表单提交
+                    submitInput();
+                }
+            });
+
+            // 初始滚动到底部（如果已有欢迎消息）
+            scrollToBottom();
+        });
+    </script>
+</body>
+</html>
+
+

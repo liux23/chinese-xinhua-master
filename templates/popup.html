@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>退出弹窗</title>
+    <style>
+        /* 弹窗框样式 */
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+    <script>
+        function showPopup() {
+            // 创建弹窗框元素
+            var popup = document.createElement('div');
+            popup.classList.add('popup');
+
+            // 创建标题元素
+            var title = document.createElement('h2');
+            title.textContent = "确定退出？";
+            popup.appendChild(title);
+
+            // 创建确定按钮元素
+            var confirmButton = document.createElement('button');
+            confirmButton.textContent = "确定";
+            confirmButton.addEventListener('click', function() {
+                // 用户点击了确定按钮
+                window.location.href = "/execute_script";  // 重定向到执行脚本的路由
+            });
+            popup.appendChild(confirmButton);
+
+            // 创建取消按钮元素
+            var cancelButton = document.createElement('button');
+            cancelButton.textContent = "取消";
+            cancelButton.addEventListener('click', function() {
+                // 用户点击了取消按钮
+                document.body.removeChild(popup);  // 移除弹窗框元素
+            });
+            popup.appendChild(cancelButton);
+
+            // 将弹窗框元素添加到页面的 body 元素
+            document.body.appendChild(popup);
+        }
+    </script>
+</head>
+<body onload="showPopup()">
+
+</body>
+</html>

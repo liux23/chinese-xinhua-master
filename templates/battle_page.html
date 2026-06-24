@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 添加视口元标签 -->
+    <title>battle</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+        h1 {
+            font-family: 'Georgia', serif;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            background-image: url("{{ url_for('static', filename='chat-bg.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .box-position {
+            display: flex; /* 使用 flexbox */
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        .selection-window {
+            width: 90%; /* 使用百分比宽度 */
+            max-width: 400px; /* 最大宽度 */
+            text-align: center;
+            padding: 5%; /* 内边距 */
+            background-color: rgba(240, 240, 240, 0.9); /* 半透明背景 */
+            border-radius: 15px; /* 圆角 */
+            margin: 15px;
+        }
+
+        .btn-view {
+            display: flex;
+            justify-content: space-between; /* 水平排列按钮并分开 */
+            gap: 10px; /* 按钮间距 */
+            margin-top: 20px; /* 顶部间距 */
+        }
+        .btn {
+            padding: 10px 20px; /* 按钮内边距 */
+            border: none; /* 无边框 */
+            border-radius: 20px; /* 圆角 */
+            background-color: #87CEFA; /* 按钮背景色 */
+            color: white; /* 字体颜色 */
+            cursor: pointer; /* 鼠标指针样式 */
+            font-family: 'Times New Roman', Times, serif; /* 正文字体 */
+            font-size: 16px; /* 正文字体大小 */
+            font-weight: 400; /* 常规字体 */
+            width: 100%; /* 按钮宽度自适应 */
+        }
+        .btn:hover {
+            background-color: #87CEEB; /* 鼠标悬停时的背景色 */
+        }
+
+        /* 媒体查询 */
+        @media (max-width: 600px) {
+            .selection-window {
+                width: 95%; /* 更小屏幕上的宽度 */
+                padding: 10%; /* 增加内边距 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="box-position">
+        <div class="selection-window">
+            <h1>谁下先手?</h1>
+            <div class="btn-view">
+                <form action="/AIFirst" method="POST">
+                    <button type="submit" class="btn">AI (竞赛型)</button>
+                </form>
+                <form action="/UserFirst" method="POST">
+                    <button type="submit" class="btn">我 (不限时间)</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

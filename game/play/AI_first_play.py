@@ -140,6 +140,34 @@ def start_countdown():
     global countdown_running
     countdown_running = True
 
+# 检查是否为提示请求
+def is_hint_request(user_input):
+    hint_keywords = ['提醒', '提醒一下', '不知道', '提示', '想不起来', '忘记了']
+    return user_input.strip() in hint_keywords
+
+# 检查是否要求换一个
+def is_change_request(user_input):
+    return user_input.strip() == '换一个'
+
+# 生成提示（返回成语的前几个字）
+def generate_hint(last_char, exclude_idiom=None):
+    possible_idioms = idioms_df[idioms_df['shoupin'] == last_char].index.tolist()
+    if exclude_idiom and exclude_idiom in possible_idioms:
+        possible_idioms.remove(exclude_idiom)
+    if possible_idioms:
+        selected_idiom = random.choice(possible_idioms)
+        hint_text = selected_idiom[:2] if len(selected_idiom) >= 2 else selected_idiom
+        return selected_idiom, hint_text
+    return None, None
+
+# 重置Redis倒计时
+def reset_redis_countdown():
+    try:
+        redis_client = redis_manager.get_client()
+        redis_client.set('countdown', 1, ex=60)  # TTL=60秒即为倒计时
+    except Exception as e:
+        print(f"重置倒计时失败: {e}")
+
 # 游戏逻辑
 def play_game(user_input):
     userName = session['username']
@@ -148,11 +176,44 @@ def play_game(user_input):
         session['used_idioms'] = []
     if 'last_char' not in session:
         session['last_char'] = None
+    if 'hinted_idiom' not in session:
+        session['hinted_idiom'] = None
+
+    # 处理提示请求
+    if is_hint_request(user_input):
+        last_char = session.get('last_char')
+        if not last_char:
+            return False, "游戏刚开始，请等待AI出题！", "hint"
+        hinted_idiom, hint_text = generate_hint(last_char)
+        if hinted_idiom:
+            session['hinted_idiom'] = hinted_idiom
+            return False, f"💡 提示：这个成语是「{hint_text}...」", "hint"
+        else:
+            return False, "抱歉，我找不到可以接的成语了，你赢了！", "game_win"
+
+    # 处理换一个请求
+    if is_change_request(user_input):
+        last_char = session.get('last_char')
+        if not last_char:
+            return False, "游戏刚开始，请等待AI出题！", "hint"
+        excluded = session.get('hinted_idiom')
+        hinted_idiom, hint_text = generate_hint(last_char, exclude_idiom=excluded)
+        if hinted_idiom:
+            session['hinted_idiom'] = hinted_idiom
+            return False, f"💡 换一个提示：这个成语是「{hint_text}...」", "hint"
+        else:
+            return False, "抱歉，没有其他可以提示的成语了。", "hint"
 
     # 检查用户输入的成语是否有效
     is_valid, message = is_valid_idiom(user_input, session.get('last_char'))
     if not is_valid:
-        return False, message
+        return False, message, "error"
+
+    # 用户接成功了，清除提示状态
+    session.pop('hinted_idiom', None)
+
+    # 立即重置Redis倒计时（在AI思考前，避免倒计时在AI思考期间过期）
+    reset_redis_countdown()
 
     # 记录用户输入的成语
     session['used_idioms'].append(user_input)
@@ -172,7 +233,7 @@ def play_game(user_input):
     # AI 接龙
     next_idiom = generate_next_idiom(session['last_char'])
     if not next_idiom:
-        return True, "你赢了！AI 无法接出成语。"
+        return True, "你赢了！AI 无法接出成语。", "game_win"
 
     # 记录 AI 的成语
     session['used_idioms'].append(next_idiom)
@@ -188,7 +249,7 @@ def play_game(user_input):
     insert_ai_data = insert_co_ai_play_dtl_data(session['Situation'], userName, session['aiNo'], next_idiom, ai_shoupin,
                                                 ai_weipin, idiom_count)
     connect_mysql.connect_sql_insert('co_ai_play_dtl', insert_ai_data)
-    return False, f"AI 接龙：{next_idiom}"
+    return False, f"AI 接龙：{next_idiom}", "normal"
 
 @app.route('/favicon.ico')
 def favicon():
@@ -197,7 +258,7 @@ def favicon():
 @app.before_request
 def check_redis():
     """在需要Redis的路由前检查连接"""
-    if request.endpoint in ['AIFirst', 'AIFirstPlay']:
+    if request.endpoint in ['AIFirst', 'AIFirstPlay', 'get_countdown', 'reset_countdown']:
         try:
             if not redis_manager.ensure_connection():
                 return render_template('redis_error.html', message="无法连接到Redis服务，请稍后再试"), 503
@@ -211,8 +272,8 @@ def AIFirst():
     try:
         # 获取Redis客户端并设置倒计时
         redis_client = redis_manager.get_client()
-        countdown_time = 30
-        redis_client.set('countdown', countdown_time, ex=60)  # 60秒过期
+        countdown_time = 60
+        redis_client.set('countdown', 1, ex=countdown_time)  # TTL即为倒计时秒数
         if 'aiNo' not in session:
             # 生成新的游戏参数
             session['aiNo'] = random.randint(1, 999999)
@@ -329,17 +390,100 @@ def AIFirstPlay():
             "used_idioms": used_idioms,  # 传递本局所有成语
             "redirect_urls": {
                 "exit": url_for('home'),  # 退出游戏路由
-                "records": url_for('gameRecords')  # 历史战绩路由
+                "records": url_for('gameRecords'),  # 历史战绩路由
+                "restart": url_for('AIFirst')  # 再来一局路由
             }
         })
 
     # 正常游戏逻辑
-    game_over, message = play_game(user_input)
+    game_over, message, msg_type = play_game(user_input)
     return jsonify({
         "status": "playing",
         "message": message,
+        "msg_type": msg_type,
         "game_over": game_over,
         "used_idioms": session.get('used_idioms', [])
+    })
+
+@app.route('/get_countdown', methods=['GET'])
+def get_countdown():
+    """获取Redis倒计时剩余时间"""
+    try:
+        redis_client = redis_manager.get_client()
+        ttl = redis_client.ttl('countdown')
+        if ttl > 0:
+            return jsonify({"countdown": ttl, "status": "running"})
+        elif ttl == -2:
+            # key 不存在或已过期
+            return jsonify({"countdown": 0, "status": "timeout"})
+        else:
+            return jsonify({"countdown": 0, "status": "timeout"})
+    except Exception as e:
+        # Redis 不可用时返回 status=error，前端用本地兜底
+        return jsonify({"countdown": -1, "status": "error", "message": str(e)})
+
+@app.route('/reset_countdown', methods=['POST'])
+def reset_countdown():
+    """重新开始倒计时（继续游戏）"""
+    try:
+        redis_client = redis_manager.get_client()
+        redis_client.set('countdown', 1, ex=60)
+        return jsonify({"status": "ok", "countdown": 60})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/timeout_save', methods=['POST'])
+def timeout_save():
+    """超时保存游戏记录并返回跳转链接"""
+    conn = connect_mysql.create_connection()
+    conn.commit()
+    used_idioms = session.get('used_idioms', [])
+    finish_time = datetime.datetime.now()
+
+    user_idiom_count = connect_mysql.select_idiom_count(conn, 'co_user_play_dtl', 'BATTLE_SITUATION',
+                                                        session['Situation'])
+    ai_idiom_count = connect_mysql.select_idiom_count(conn, 'co_ai_play_dtl', 'BATTLE_SITUATION',
+                                                      session['Situation'])
+    if not isinstance(user_idiom_count, (int, float)):
+        user_idiom_count = 0
+    if not isinstance(ai_idiom_count, (int, float)):
+        ai_idiom_count = 0
+    idiom_count = user_idiom_count + ai_idiom_count
+
+    start_time = connect_mysql.select_two_conditions(conn, 'co_ai_play_dtl', 'inst_time', 'BATTLE_SITUATION',
+                                                     session['Situation'], 'SORT', '1')
+    if ai_idiom_count > user_idiom_count:
+        winner = 'AI'
+        end = finish_time
+    else:
+        winner = 'USER'
+        end_time = connect_mysql.select_two_conditions(conn, 'co_user_play_dtl', 'inst_time', 'BATTLE_SITUATION',
+                                                       session['Situation'], 'SORT', idiom_count)
+        end = end_time[0][0]
+    start = start_time[0][0]
+    time_diff = end - start
+
+    userName = session['username']
+    insert_record_data = insert_co_user_play_record_data(userName, session['aiNo'], session['Situation'], 'AI',
+                                                         start, end, time_diff, 'easy', idiom_count, winner)
+    connect_mysql.connect_sql_insert('co_user_play_record', insert_record_data)
+
+    # 清空 session
+    session.pop('used_idioms', None)
+    session.pop('last_char', None)
+    session.pop('initial_ai_idiom', None)
+    session.pop('aiNo', None)
+    session.pop('Situation', None)
+
+    return jsonify({
+        "status": "game_over",
+        "message": "时间到！游戏结束！",
+        "used_idioms": used_idioms,
+        "redirect_urls": {
+            "exit": url_for('home'),
+            "records": url_for('gameRecords'),
+            "restart": url_for('AIFirst')
+        }
     })
 
 @app.route('/stop_redis', methods=['GET', 'POST'])

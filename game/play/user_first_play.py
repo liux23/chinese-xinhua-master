@@ -107,6 +107,28 @@ def generate_next_idiom(last_char):
         return random.choice(possible_idioms)
     return None
 
+# 检查是否为提示请求
+def is_hint_request(user_input):
+    hint_keywords = ['提醒', '提醒一下', '不知道', '提示', '想不起来', '忘记了']
+    return user_input.strip() in hint_keywords
+
+# 检查是否要求换一个
+def is_change_request(user_input):
+    return user_input.strip() == '换一个'
+
+# 生成提示（返回成语的前几个字）
+def generate_hint(last_char, exclude_idiom=None):
+    possible_idioms = idioms_df[idioms_df['shoupin'] == last_char].index.tolist()
+    # 排除已经提示过的成语
+    if exclude_idiom and exclude_idiom in possible_idioms:
+        possible_idioms.remove(exclude_idiom)
+    if possible_idioms:
+        selected_idiom = random.choice(possible_idioms)
+        # 返回前两个字作为提示
+        hint_text = selected_idiom[:2] if len(selected_idiom) >= 2 else selected_idiom
+        return selected_idiom, hint_text
+    return None, None
+
 # 游戏逻辑
 def play_game(user_input):
     userName = session['username']
@@ -115,11 +137,42 @@ def play_game(user_input):
         session['used_idioms'] = []
     if 'last_char' not in session:
         session['last_char'] = None
+    if 'hinted_idiom' not in session:
+        session['hinted_idiom'] = None
+
+    # 处理提示请求
+    if is_hint_request(user_input):
+        last_char = session.get('last_char')
+        if not last_char:
+            return False, "游戏刚开始，请直接输入成语开始游戏！", "hint"
+        hinted_idiom, hint_text = generate_hint(last_char)
+        if hinted_idiom:
+            session['hinted_idiom'] = hinted_idiom
+            return False, f"💡 提示：这个成语是「{hint_text}...」", "hint"
+        else:
+            return True, "抱歉，我找不到可以接的成语了，你赢了！", "game_win"
+
+    # 处理换一个请求
+    if is_change_request(user_input):
+        last_char = session.get('last_char')
+        if not last_char:
+            return False, "游戏刚开始，请直接输入成语开始游戏！", "hint"
+        # 排除之前提示的成语
+        excluded = session.get('hinted_idiom')
+        hinted_idiom, hint_text = generate_hint(last_char, exclude_idiom=excluded)
+        if hinted_idiom:
+            session['hinted_idiom'] = hinted_idiom
+            return False, f"💡 换一个提示：这个成语是「{hint_text}...」", "hint"
+        else:
+            return False, "抱歉，没有其他可以提示的成语了。", "hint"
 
     # 检查用户输入的成语是否有效
     is_valid, message = is_valid_idiom(user_input, session.get('last_char'))
     if not is_valid:
-        return False, message
+        return False, message, "error"
+
+    # 用户接成功了，清除提示状态
+    session.pop('hinted_idiom', None)
 
     # 记录用户输入的成语
     session['used_idioms'].append(user_input)
@@ -135,7 +188,7 @@ def play_game(user_input):
     next_idiom = generate_next_idiom(session['last_char'])
     # print('AI 接成语：',next_idiom)
     if not next_idiom:
-        return True, "你赢了！AI 无法接出成语。"
+        return True, "你赢了！AI 无法接出成语。", "game_win"
 
     # 记录 AI 的成语
     session['used_idioms'].append(next_idiom)
@@ -146,7 +199,7 @@ def play_game(user_input):
     insert_ai_data = insert_co_ai_play_dtl_data(session['Situation'], userName, session['aiNo'], next_idiom, ai_shoupin,
                                                 ai_weipin, idiom_count)
     connect_mysql.connect_sql_insert('co_ai_play_dtl', insert_ai_data)
-    return False, f"AI 接龙：{next_idiom}"
+    return False, f"AI 接龙：{next_idiom}", "normal"
 
 @app.route('/favicon.ico')
 def favicon():
@@ -247,10 +300,11 @@ def UserFirstPlay():
         })
 
         # 正常游戏逻辑
-    game_over, message = play_game(user_input)
+    game_over, message, msg_type = play_game(user_input)
     return jsonify({
         "status": "playing",
         "message": message,
+        "msg_type": msg_type,
         "game_over": game_over,
         "used_idioms": session.get('used_idioms', [])
     })

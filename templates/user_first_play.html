@@ -192,6 +192,14 @@
         .message.ai {
             background-color: #28a745;
         }
+        .message.hint {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .message.error {
+            background-color: #dc3545;
+            color: #fff;
+        }
         .chat-input {
             display: flex;
             padding: 10px;
@@ -241,7 +249,7 @@
                     <div id="myForm" class="chat-input">
 <!--                        <label for="user_input">请输入成语：</label>-->
                         <input type="text" id="user_input" name="user_input" autocomplete="off"
-                               placeholder="输入成语或Q退出..." required />
+                               placeholder="输入成语 | 提示词：提醒/不知道 | 换一个" required />
                         <button type="button" class="button" id="submitBtn">发送</button>
                     </div>
                 </div>
@@ -320,10 +328,17 @@
                         // 显示游戏结束弹窗
                         showGameOverModal(data);
                     } else {
-                        // 显示 AI 响应（转义）
+                        // 显示 AI 响应（转义），根据消息类型设置样式
                         const aiMessage = document.createElement('div');
-                        aiMessage.className = 'chat-message ai';   // 小写匹配CSS
-                        aiMessage.innerHTML = `<div class="message ai">${escapeHtml(data.message)}</div>`;
+                        aiMessage.className = 'chat-message ai';
+                        // 根据 msg_type 设置不同的样式类
+                        let msgClass = 'ai';
+                        if (data.msg_type === 'hint') {
+                            msgClass = 'hint';
+                        } else if (data.msg_type === 'error') {
+                            msgClass = 'error';
+                        }
+                        aiMessage.innerHTML = `<div class="message ${msgClass}">${escapeHtml(data.message)}</div>`;
                         chatMessages.appendChild(aiMessage);
                         scrollToBottom();   // 滚动到AI回复
                     }

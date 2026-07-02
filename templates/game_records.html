@@ -5,53 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>成语接龙历史记录</title>
     <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
         body {
             font-family: 'Microsoft YaHei', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
             background-image: url("{{ url_for('static', filename='chat-bg.jpg') }}");
-            background-size: cover; /* 覆盖整个视口 */
+            background-size: cover;
             background-position: center;
-            background-repeat: no-repeat; /* 禁止重复 */
-            background-attachment: fixed; /* 固定背景不滚动 */
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         h1 {
             color: #333;
             text-align: center;
-            margin: 20px 0;
+            margin: 15px 0 10px 0;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .records-container {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0 20px;
+            padding: 15px;
+            background-color: rgba(236, 254, 245, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .records-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .records-container::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
         }
         .history-item {
             display: flex;
-            justify-content: space-between
-            align-items: center; /* 垂直居中 */
-            background-color: rgba(249, 249, 249, 0.2);
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.6);
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .history-item:last-child {
+            margin-bottom: 0;
         }
         .info {
-            flex-grow: 1; /* 允许信息区域占据剩余空间 */
-            margin-right: 10px; /* 右侧间距 */
+            flex-grow: 1;
+            margin-right: 10px;
+            font-size: 14px;
+            line-height: 1.6;
         }
         .time {
             color: #666;
-            font-size: 0.9em;
-            margin-bottom: 5px;
+            font-size: 12px;
+            margin-bottom: 3px;
         }
-        .idioms {
-            margin-top: 10px;
-        }
-        .idiom {
-            display: inline-block;
-            background: #e3f2fd;
-            padding: 5px 10px;
-            margin: 3px;
-            border-radius: 4px;
-        }
-        .position-right{
-            margin-right: 50px;
-            margin-top: 20px;
+        .position-right {
+            flex-shrink: 0;
         }
         .modal-overlay {
             position: fixed;
@@ -75,57 +94,82 @@
             overflow-y: auto;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-
-        .iframe {
-            overflow-y: auto;    /* 允许内容滚动 */
-            scrollbar-width: none; /* Firefox */
-            height: 500px;
-            background-color: #ECFEF5;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            margin: 20px;
-        }
-        .quit-btn, .back-btn {
-            display: block;
-            width: 100px;
-            text-align: center;
-            margin: 20px auto;
-            padding: 10px;
+        .idiom {
+            display: inline-block;
+            background: #e3f2fd;
+            padding: 5px 10px;
+            margin: 3px;
             border-radius: 4px;
-            text-decoration: none;
-            color: white;
-        }
-        .quit-btn {
-            background: red;
-        }
-        .back-btn {
-            background: #4CAF50;
         }
         .btn-position {
             display: flex;
-            justify-content: space-between; /* 按钮之间的空间 */
-            flex-wrap: wrap; /* 允许换行 */
-            margin: 20px 0;
+            justify-content: center;
+            gap: 30px;
+            padding: 15px 0;
+            flex-shrink: 0;
+        }
+        .quit-btn, .back-btn {
+            display: inline-block;
+            width: 120px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: white;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .quit-btn:hover, .back-btn:hover {
+            opacity: 0.85;
+        }
+        .quit-btn {
+            background: #dc3545;
+        }
+        .back-btn {
+            background: #28a745;
+        }
+        .modal-back-btn {
+            display: block;
+            width: 100px;
+            text-align: center;
+            margin: 15px auto 0;
+            padding: 8px;
+            border-radius: 4px;
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
         }
 
         /* 移动端适配 */
         @media (max-width: 600px) {
-            .history-item {
-                padding: 10px; /* 减小内边距 */
-                flex-direction: column; /* 垂直排列 */
+            h1 {
+                font-size: 20px;
+                margin: 10px 0 8px 0;
             }
-            .position-right{
-                width: 100%;
-                margin-left: 5%;
+            .records-container {
+                margin: 0 10px;
+                padding: 10px;
+            }
+            .history-item {
+                padding: 10px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .info {
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+            .position-right {
+                text-align: center;
             }
             .btn-position {
-                flex-direction: column; /* 垂直排列按钮 */
-                align-items: center; /* 居中 */
+                gap: 15px;
+                padding: 10px 0;
             }
             .quit-btn, .back-btn {
-                width: 90%; /* 按钮宽度占满 */
-                margin: 10px 0; /* 上下间距 */
+                width: 100px;
+                font-size: 14px;
             }
         }
     </style>
@@ -133,7 +177,7 @@
 <body>
     <h1>成语接龙历史记录</h1>
 
-    <div class="iframe">
+    <div class="records-container">
         {% if records %}
             {% for game in records %}
                 <div class="history-item">
@@ -159,7 +203,7 @@
         <div class="modal-content">
             <h2>游戏成语记录</h2>
             <div id="all_idioms"></div>
-            <button id="exitGame" class="back-btn">关闭</button>
+            <button id="exitGame" class="modal-back-btn">关闭</button>
         </div>
     </div>
 

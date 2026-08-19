@@ -94,9 +94,27 @@ with open('D:\Download\Idiom_Solitaire\chinese-xinhua-master\data\idiom.json', '
 
 # 检查成语是否有效
 def is_valid_idiom(idiom, last_char=None):
+    # 检查是否为中文
+    if not all(0x4E00 <= ord(c) <= 0x9FFF for c in idiom):
+        return False, "请输入正确的中文成语！"
+
+    # 检查成语是否有效
     if idiom not in idioms_df.index:
+        # 尝试匹配拼音
+        try:
+            pinyin = idioms_df[idioms_df['word'] == idiom]['pinyin'].values[0]
+            no_tone_pinyin = remove_tone(pinyin)
+            if ' ' in no_tone_pinyin:  # 确保是多音节
+                return True, ""
+        except Exception:
+            pass
         return False, "成语不存在！"
-    if last_char and idioms_df.loc[idiom, 'shoupin'] != last_char:
+
+    # 检查是否需要首字匹配
+    if last_char and last_char != idioms_df.loc[idiom, 'shoupin']:
+        # 尝试处理大小写差异
+        if last_char.lower() == idioms_df.loc[idiom, 'shoupin'].lower():
+            return True, ""
         return False, f"成语必须以 '{last_char}' 开头！"
     return True, ""
 
@@ -145,12 +163,20 @@ def play_game(user_input):
         last_char = session.get('last_char')
         if not last_char:
             return False, "游戏刚开始，请直接输入成语开始游戏！", "hint"
+
+        # 尝试生成提示
         hinted_idiom, hint_text = generate_hint(last_char)
         if hinted_idiom:
             session['hinted_idiom'] = hinted_idiom
             return False, f"💡 提示：这个成语是「{hint_text}...」", "hint"
-        else:
+
+        # 检查是否有可接的成语（游戏是否真的结束了）
+        possible_idioms = idioms_df[idioms_df['shoupin'] == last_char].index.tolist()
+        if not possible_idioms:
             return True, "抱歉，我找不到可以接的成语了，你赢了！", "game_win"
+
+        # 只是找不到合适的提示，但游戏还没结束
+        return False, "找不到合适的提示，请再试一次。可以换一个提示词吗？", "hint"
 
     # 处理换一个请求
     if is_change_request(user_input):

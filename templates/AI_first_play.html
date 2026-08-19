@@ -514,6 +514,9 @@
                 userMessage.className = 'chat-message user';
                 userMessage.innerHTML = `<div class="message user">${escapeHtml(input)}</div>`;
                 chatMessages.appendChild(userMessage);
+                requestAnimationFrame(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
 
                 fetch('/AIFirstPlay', {
                     method: 'POST',
